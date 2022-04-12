@@ -2,7 +2,7 @@
 ## Running the Project Locally
 **First, clone the repository to your local machine:**
 
-    https://github.com/HaoHao2703/Ecourse-Back-end.git
+    git clone https://github.com/HaoHao2703/Ecourse-Back-end.git
   
 **Install the requirements:**
 
