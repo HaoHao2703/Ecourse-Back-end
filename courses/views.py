@@ -5,7 +5,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.conf import settings
 from django.db.models import F
+from rest_framework.parsers import MultiPartParser
 # from django.http import Http404
+# from oauth2_provider.contrib.rest_framework import TokenHasReadWriteScope
 
 from courses.models import Category, Course, Lesson, Tag, Comment, User, Action, Rating, LessonView
 from courses.serializers import CategorySerializer, CourseSerializer, LessonSerializer, LessonDetailSerializer, CommentSerializer, UserSerializer, ActionSerializer, RatingSerializer, LessonViewSerializer
@@ -24,6 +26,7 @@ class CourseViewSet(viewsets.ViewSet, generics.ListAPIView):
 
     def get_queryset(self):
         courses = Course.objects.filter(active=True);
+
         q = self.request.query_params.get('q');
         if q is not None:
             courses = courses.filter(subject__icontains=q);
@@ -34,7 +37,7 @@ class CourseViewSet(viewsets.ViewSet, generics.ListAPIView):
 
         return courses;
     
-    @action(methods=['get'], detail=True, url_path='lesson')
+    @action(methods=['get'], detail=True, url_path='lessons')
     def get_lessons(self, request, pk):
         lessons = Course.objects.get(pk=pk).lessons.filter(active=True);
         # lessons = self.get_object().lessons.filter(active=True);
@@ -43,7 +46,7 @@ class CourseViewSet(viewsets.ViewSet, generics.ListAPIView):
         if q is not None:
             lessons = lessons.filter(subject__icontains=q);
 
-        return Response(LessonSerializer(lessons, many=True).data, status=status.HTTP_200_OK);
+        return Response(LessonSerializer(lessons, many=True, context={'request': request}).data, status=status.HTTP_200_OK);
 
 
 #Lesson API
@@ -83,6 +86,13 @@ class LessonViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
                 return Response(self.serializer_class(lesson).data, status=status.HTTP_201_CREATED);
         return Response(status=status.HTTP_404_NOT_FOUND);
     
+    @action(methods=['get'], detail=True, url_path="comments")
+    def get_comments(self, request, pk):
+        lesson = Lesson.objects.get(pk=pk);
+        comment = lesson.comment_post.all();
+        return Response(CommentSerializer(comment, many=True).data,
+                        status=status.HTTP_200_OK);
+
     @action(methods=['post'], detail=True, url_path="add-comment")
     def add_comment(self, request, pk):
         content = request.data.get('content');
@@ -116,14 +126,14 @@ class LessonViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
         else:
             r = Rating.objects.create(rate=rating, 
                                    		creator=request.user,
-																			lesson=self.get_object());
+										lesson=self.get_object());
             return Response(RatingSerializer(r).data,
                             status=status.HTTP_200_OK);
 
 
 #Comment API
-class CommentViewSet(viewsets.ViewSet, generics.DestroyAPIView, generics.UpdateAPIView):
-    # queryset = Comment.objects.all();
+class CommentViewSet(viewsets.ViewSet, generics.DestroyAPIView, generics.UpdateAPIView, generics.ListAPIView):
+    queryset = Comment.objects.all();
     serializer_class = CommentSerializer;
     permission_classes = [permissions.IsAuthenticated];
     
@@ -142,6 +152,7 @@ class CommentViewSet(viewsets.ViewSet, generics.DestroyAPIView, generics.UpdateA
 class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
     queryset = User.objects.filter(is_active=True);
     serializer_class = UserSerializer;
+    parser_classes = [MultiPartParser, ]
 
     def get_permissions(self):
         if self.action == 'get_current_user':
@@ -150,9 +161,8 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
         
     @action(methods=['get'], detail=False, url_path="current-user")
     def get_current_user(self, request):
-        return Response(self.serializer_class(request.user).data, 
+        return Response(self.serializer_class(request.user).data,
                         status=status.HTTP_200_OK);
-
 
 class AuthInfo(APIView):
     def get(self, request):
@@ -163,4 +173,4 @@ class AuthInfo(APIView):
 
 
 
-# viewsets.ViewSet -> Tao san URL Endpoint
+# viewsets.ViewSet -> Created URL Endpoint

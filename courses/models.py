@@ -30,6 +30,7 @@ class Course(ModelBase):
         # Khong trung ten khoa hoc trong mot danh muc 
         unique_together = ('subject', 'category');
         ordering = ["-id"]
+        
     description = models.TextField(null=True, blank=True);
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True);
 
@@ -46,8 +47,8 @@ class Lesson(ModelBase): #course_lesson
 
 class Comment(models.Model):
     content = models.TextField();
-    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE);
-    creator = models.ForeignKey(User, on_delete=models.CASCADE);
+    lesson = models.ForeignKey(Lesson, related_name="comment_post", on_delete=models.CASCADE);
+    creator = models.ForeignKey(User, related_name="creator_set", on_delete=models.CASCADE);
     created_date = models.DateTimeField(auto_now_add=True);
     updated_date = models.DateTimeField(auto_now=True);
 
